@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 export interface Course {
   id: number;
@@ -8,7 +8,7 @@ export interface Course {
   duration: number;
 }
 
-const courses: Course[] = [
+const INITIAL_COURSES: Course[] = [
   {
     id: 1,
     title: 'Introduction to JavaScript',
@@ -41,9 +41,27 @@ const courses: Course[] = [
   providedIn: 'root',
 })
 export class CoursesService {
-  // Simulate a service that returns an Observable of courses
-  // In a real app this could be an http call returning from(fetch(...))
+  private coursesSubject = new BehaviorSubject<Course[]>(INITIAL_COURSES);
+
   getCourses(): Observable<Course[]> {
-    return of(courses);
+    return this.coursesSubject.asObservable();
+  }
+
+  addCourse(course: Omit<Course, 'id'>): void {
+    const current = this.coursesSubject.getValue();
+    const maxId = current.length > 0 ? Math.max(...current.map((c) => c.id)) : 0;
+    const newCourse: Course = { ...course, id: maxId + 1 };
+    this.coursesSubject.next([...current, newCourse]);
+  }
+
+  updateCourse(updated: Course): void {
+    const current = this.coursesSubject.getValue();
+    const list = current.map((c) => (c.id === updated.id ? { ...updated } : c));
+    this.coursesSubject.next(list);
+  }
+
+  deleteCourse(id: number): void {
+    const current = this.coursesSubject.getValue();
+    this.coursesSubject.next(current.filter((c) => c.id !== id));
   }
 }
