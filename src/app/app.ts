@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription, fromEvent, combineLatest } from 'rxjs';
+import { Subscription, fromEvent, combineLatest, BehaviorSubject } from 'rxjs';
 import {
   map,
   debounceTime,
@@ -28,27 +28,66 @@ import { CoursesService, Course } from './courses.service';
           <h1 class="logo">
             <span class="logo-icon">📚</span> Courses Manager
           </h1>
-          <span class="badge">BehaviorSubject</span>
+          <span class="badge">combineLatest</span>
         </div>
       </header>
 
       <main class="main">
-        <!-- Search bar -->
-        <section class="search-section">
-          <div class="search-wrapper">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              #searchInput
-              id="search"
-              type="search"
-              class="search-input"
-              placeholder="Search courses by title..."
-            />
+        <!-- Filter Section -->
+        <section class="filter-section">
+          <div class="filter-bar">
+            <!-- Search by title -->
+            <div class="search-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                #searchInput
+                id="search"
+                type="search"
+                class="search-input"
+                placeholder="Search courses by title..."
+              />
+            </div>
+
+            <!-- Filter by category -->
+            <div class="category-filter-wrapper">
+              <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              <select
+                id="categoryFilter"
+                class="category-select"
+                (change)="onCategoryChange($event)"
+              >
+                <option value="">All Categories</option>
+                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+              </select>
+            </div>
           </div>
-          <p class="results-count">{{ coursesList.length }} course{{ coursesList.length !== 1 ? 's' : '' }} found</p>
+
+          <!-- Active filters display -->
+          <div class="filter-status">
+            <p class="results-count">
+              {{ coursesList.length }} course{{ coursesList.length !== 1 ? 's' : '' }} found
+            </p>
+            <div class="active-filters" *ngIf="activeSearchTerm || activeCategory">
+              <span class="filter-label">Active filters:</span>
+              <span class="filter-chip" *ngIf="activeSearchTerm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                "{{ activeSearchTerm }}"
+              </span>
+              <span class="filter-chip filter-chip-category" *ngIf="activeCategory">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                {{ activeCategory }}
+              </span>
+            </div>
+          </div>
         </section>
 
         <div class="content-grid">
@@ -156,7 +195,7 @@ import { CoursesService, Course } from './courses.service';
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                 </svg>
                 <p>No courses found.</p>
-                <span>Try a different search or add a new course.</span>
+                <span>Try a different search or category filter.</span>
               </div>
             </ng-template>
           </section>
@@ -177,7 +216,13 @@ export class App implements OnInit, OnDestroy {
   formCategory = '';
   formDuration: number | null = null;
 
+  activeSearchTerm = '';
+  activeCategory = '';
+
   categories = ['Programming', 'Web', 'Testing', 'Design', 'Framework', 'DevOps', 'Data Science'];
+
+  /** BehaviorSubject for the category filter stream */
+  private categorySubject$ = new BehaviorSubject<string>('');
 
   private subscription!: Subscription;
 
@@ -187,6 +232,7 @@ export class App implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Stream 1: search text from the input element
     const search$ = fromEvent(this.searchInputRef.nativeElement, 'input').pipe(
       map((e) => (e.target as HTMLInputElement).value.trim()),
       debounceTime(300),
@@ -194,14 +240,36 @@ export class App implements OnInit, OnDestroy {
       startWith(''),
     );
 
+    // Stream 2: selected category from the BehaviorSubject
+    const category$ = this.categorySubject$.pipe(
+      distinctUntilChanged(),
+    );
+
+    // Combine all three streams: courses data + search text + category filter
     const results$ = combineLatest([
       this.coursesService.getCourses(),
       search$,
+      category$,
     ]).pipe(
-      map(([list, query]) => {
-        if (!query) return list;
-        const q = query.toLowerCase();
-        return list.filter((c) => c.title.toLowerCase().includes(q));
+      map(([list, query, category]) => {
+        // Track active filters for the UI
+        this.activeSearchTerm = query;
+        this.activeCategory = category;
+
+        let filtered = list;
+
+        // Filter by title (search)
+        if (query) {
+          const q = query.toLowerCase();
+          filtered = filtered.filter((c) => c.title.toLowerCase().includes(q));
+        }
+
+        // Filter by category
+        if (category) {
+          filtered = filtered.filter((c) => c.category === category);
+        }
+
+        return filtered;
       }),
     );
 
@@ -215,6 +283,12 @@ export class App implements OnInit, OnDestroy {
     if (this.subscription) {
       this.subscription.unsubscribe();
     }
+  }
+
+  /** Handle category select change */
+  onCategoryChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.categorySubject$.next(value);
   }
 
   isFormValid(): boolean {
