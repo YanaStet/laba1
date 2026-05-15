@@ -598,6 +598,41 @@ body {
   animation: fadeIn 0.3s ease forwards;
 }
 
+/* ===== Nav Link HTTP ===== */
+.nav-link-http {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: all var(--transition);
+  background: var(--bg-input);
+}
+
+.nav-link-http:hover {
+  color: var(--accent-light);
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+/* ===== Additional Category Badges ===== */
+.category-badge[data-category='Frontend'] {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
+.category-badge[data-category='Backend'] {
+  background: rgba(54, 211, 153, 0.12);
+  color: #36d399;
+}
+
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
   width: 6px;

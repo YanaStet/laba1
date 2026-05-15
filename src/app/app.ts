@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Subscription, fromEvent, combineLatest, BehaviorSubject } from 'rxjs';
 import {
   map,
@@ -18,8 +19,8 @@ import {
 import { CoursesService, Course } from './courses.service';
 
 @Component({
-  selector: 'app-root',
-  imports: [CommonModule, FormsModule],
+  selector: 'app-courses-page',
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="app-shell">
       <!-- Header -->
@@ -28,6 +29,9 @@ import { CoursesService, Course } from './courses.service';
           <h1 class="logo">
             <span class="logo-icon">📚</span> Courses Manager
           </h1>
+          <a routerLink="/courses-http" class="nav-link-http">
+            🌐 Courses HTTP
+          </a>
           <span class="badge">combineLatest</span>
         </div>
       </header>
